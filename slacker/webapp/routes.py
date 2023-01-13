@@ -1,5 +1,6 @@
 from . import app
 
-@app.route('/')
-def index():
+
+@app.route("/")
+def index() -> str:
     return "SLAAAAACK"
