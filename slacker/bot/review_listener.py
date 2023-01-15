@@ -12,11 +12,6 @@ def review_listener(client: BaseSocketModeClient, request: SocketModeRequest) ->
         and request.payload["callback_id"] == "review"
     ):
         # respond to /slacker review
-
-        # Start by acknowledging
-        response = SocketModeResponse(envelope_id=request.envelope_id)
-        client.send_socket_mode_response(response)
-
         client.web_client.views_open(
             trigger_id=request.payload["trigger_id"],
             view={
@@ -48,5 +43,4 @@ def review_listener(client: BaseSocketModeClient, request: SocketModeRequest) ->
         and request.payload["view"]["callback_id"] == "review-modal"
     ):
         # Handle the review modal submission
-        response = SocketModeResponse(envelope_id=request.envelope_id)
-        client.send_socket_mode_response(response)
+        pass
