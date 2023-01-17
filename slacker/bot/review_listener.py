@@ -1,11 +1,14 @@
+from slacker.github import GitHub, PR_RE
+
 from slack_sdk.socket_mode.client import BaseSocketModeClient
 from slack_sdk.socket_mode.response import SocketModeResponse
 from slack_sdk.socket_mode.request import SocketModeRequest
 from slack_sdk.socket_mode.listeners import SocketModeRequestListener
 
 
-def verify_github_pr_url(url):
-    return False
+def verify_github_pr_url(url: str) -> bool:
+    github = GitHub()
+    return github.valid_pr_url(url)
 
 
 def review_listener(client: BaseSocketModeClient, request: SocketModeRequest) -> None:
@@ -56,7 +59,8 @@ def review_listener(client: BaseSocketModeClient, request: SocketModeRequest) ->
         pr_url = request.payload["view"]["state"]["values"]["pr"]["pr_url"]["value"]
 
         print(f"PR URL: {pr_url}")
-        if not verify_github_pr_url(pr_url):
+        url_is_good = verify_github_pr_url(pr_url)
+        if not url_is_good:
             response_payload = {
                 "response_action": "errors",
                 "errors": {
@@ -65,8 +69,13 @@ def review_listener(client: BaseSocketModeClient, request: SocketModeRequest) ->
             }
 
         # Send the acknowledgement, possibly with errors
-        print(f"response: {response_payload}")
         response = SocketModeResponse(
             envelope_id=request.envelope_id, payload=response_payload
         )
         client.send_socket_mode_response(response)
+
+        # If errors, bail out
+        if not url_is_good:
+            return
+
+        # Assign PR to a reviewer

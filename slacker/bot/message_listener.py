@@ -1,11 +1,11 @@
 import re
 
+from slacker.github import GitHub, PR_RE
+
 from slack_sdk.socket_mode.client import BaseSocketModeClient
 from slack_sdk.socket_mode.response import SocketModeResponse
 from slack_sdk.socket_mode.request import SocketModeRequest
 from slack_sdk.socket_mode.listeners import SocketModeRequestListener
-
-PR_RE = re.compile("https://github.com/([^/]*)/([^/]*)/pull/([0-9]*)")
 
 
 def message_listener(client: BaseSocketModeClient, request: SocketModeRequest) -> None:
@@ -24,8 +24,6 @@ def message_listener(client: BaseSocketModeClient, request: SocketModeRequest) -
             text = event["text"]
             match = PR_RE.search(text)
 
-            print(f"text = f{text}")
-            print(f"match = f{match}")
             if match is None or "!review" not in text:
                 return
 
