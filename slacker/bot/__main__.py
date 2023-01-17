@@ -9,7 +9,6 @@ from threading import Event
 
 from .review_listener import review_listener
 from .logging_listener import logging_listener
-from .acknowledge_listener import acknowledge_listener
 
 
 def run(app_token: str, bot_token: str) -> None:
@@ -21,7 +20,6 @@ def run(app_token: str, bot_token: str) -> None:
     client.logger = logging.getLogger(__name__)
     client.socket_mode_request_listeners.append(review_listener)
     client.socket_mode_request_listeners.append(logging_listener)
-    client.socket_mode_request_listeners.append(acknowledge_listener)
     client.connect()
     Event().wait()
 
