@@ -13,15 +13,25 @@ Service dependencies
 Setup
 -----
 
+Install all the python deps
+
     $ python -mvenv .venv
     $ . .venv/bin/activate
     $ pip install pypoetry
     $ poetry install
 
+Create a database if necessary
+
+    $ psql -h localhost -U postgres template1 -e 'CREATE DATABASE slacker_dev'
+
+Create the schema
+
+    $ alembic upgrade head
+
 Running the slack bot
 ---------------------
 
-    $ ??
+    $ python -mslacker.bot
 
 Running the web app
 -------------------

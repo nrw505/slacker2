@@ -1,38 +1,24 @@
 import os
 import logging
-from slack_sdk.web import WebClient
-from slack_sdk.socket_mode import SocketModeClient
-from slack_sdk.socket_mode.client import BaseSocketModeClient
-from slack_sdk.socket_mode.response import SocketModeResponse
-from slack_sdk.socket_mode.request import SocketModeRequest
-from threading import Event
 
-from .review_listener import review_listener
-from .logging_listener import logging_listener
-from .message_listener import message_listener
+from . import Bot
 
-
-def run(app_token: str, bot_token: str) -> None:
-    client = SocketModeClient(
-        app_token=app_token,
-        web_client=WebClient(token=bot_token),
-    )
-
-    client.logger = logging.getLogger(__name__)
-    client.socket_mode_request_listeners.append(review_listener)
-    client.socket_mode_request_listeners.append(message_listener)
-    client.socket_mode_request_listeners.append(logging_listener)
-    client.connect()
-    Event().wait()
-
+logging.basicConfig()
 
 app_token = os.environ.get("SLACK_APP_TOKEN")
 bot_token = os.environ.get("SLACK_BOT_TOKEN")
+github_token = os.environ.get("GITHUB_TOKEN")
+db_url = os.environ.get("DATABASE_URL")
 
 if app_token == None:
     print("SLACK_APP_TOKEN is not set")
 if bot_token == None:
     print("SLACK_BOT_TOKEN is not set")
+if github_token == None:
+    print("GITHUB_TOKEN is not set")
+if db_url == None:
+    print("DATABASE_URL is not set")
 
-if app_token and bot_token:
-    run(app_token, bot_token)
+if app_token and bot_token and db_url and github_token:
+    bot = Bot(app_token, bot_token, github_token, db_url)
+    bot.run()

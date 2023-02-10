@@ -13,8 +13,7 @@ class InvalidURLError(ValueError):
 class GitHub:
     client: Github
 
-    def __init__(self) -> None:
-        token = os.environ["GITHUB_TOKEN"] or ""
+    def __init__(self, token: str) -> None:
         self.client = Github(token)
 
     def valid_pr_url(self, url: str) -> bool:
