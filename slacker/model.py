@@ -24,7 +24,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     github_username: Mapped[str] = mapped_column(String(255))
     password_hash: Mapped[str] = mapped_column(String(255))
-    email: Mapped[str] = mapped_column(String(255))
+    email: Mapped[str] = mapped_column(String(255), unique=True)
 
     channel_configs: Mapped[List["UserChannelConfig"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -34,7 +34,7 @@ class User(Base):
     )
 
     def __repr__(self) -> str:
-        return f"User(id={self.id!r}, slack={self.slack_id!r}, github={self.github_username!r})"
+        return f"User(id={self.id!r}, slack={self.slack_id!r}, name={self.name!r}, github={self.github_username!r})"
 
 
 class Channel(Base):
@@ -59,7 +59,7 @@ class Channel(Base):
 
 
 class UserChannelConfig(Base):
-    __tablename__ = "user_channel_config"
+    __tablename__ = "user_channel_configs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(

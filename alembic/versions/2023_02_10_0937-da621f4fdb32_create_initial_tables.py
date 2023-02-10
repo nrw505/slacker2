@@ -24,7 +24,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("github_username", sa.String(255)),
         sa.Column("password_hash", sa.String(255)),
-        sa.Column("email", sa.String(255)),
+        sa.Column("email", sa.String(255), unique=True),
     )
     op.create_table(
         "channels",
