@@ -256,13 +256,20 @@ class Bot:
         user = session.scalars(statement).one_or_none()
 
         if user is None:
+            real_name = "Unknown"
+            email = None
+
             response = self.client.web_client.users_info(user=slack_id)
             slack_data = response.get("user")
             print(f"slack_data = {slack_data}")
+            if slack_data is not None:
+                real_name = slack_data["real_name"]
+                email = slack_data["profile"]["email"]
+
             user = User(
                 slack_id=slack_id,
-                name=slack_data["real_name"],
-                email=slack_data["profile"]["email"],
+                name=real_name,
+                email=email,
             )
             session.add(user)
             session.commit()
@@ -273,11 +280,16 @@ class Bot:
         channel = session.scalars(statement).one_or_none()
 
         if channel is None:
+            name = "unknown"
+
             response = self.client.web_client.conversations_info(channel=slack_id)
             slack_data = response.get("channel")
+            if slack_data is not None:
+                name = slack_data["name"]
+
             channel = Channel(
                 slack_id=slack_id,
-                name=slack_data["name"],
+                name=name,
                 new_devs_are_reviewers=True,
             )
             session.add(channel)

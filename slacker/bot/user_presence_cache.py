@@ -17,7 +17,7 @@ class UserPresenceCacheEntry:
 
 class UserPresenceCache:
     client: WebClient
-    cache: Dict
+    cache: Dict[str, UserPresenceCacheEntry]
 
     def __init__(self, client: WebClient):
         self.client = client
