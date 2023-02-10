@@ -46,3 +46,41 @@ Credentials
 The bot (and the webapp) access github PR data by using a "Personal
 Access Token". You should generate your own and put it in `.env`. You
 will need to select the scopes `repo`, `read:project` and `read:user`
+
+The bot (and the webapp) access slack by using both a bot token and a
+web app token. To test things locally, you will need to create your
+own application definition as well as having admin on a slack
+workspace in order to add the app to it. I suggest creating your own
+free tier slack workspace for that.
+
+You will need to configure the application definition.
+
+In "Settings >> Socket Mode", you need to tick the "Enable Socket
+Mode" option.
+
+In "Features >> Interactivity & Shortcuts", you need to add a shortcut
+with Name: Review, Short Description: Request a PR Review, Callback
+ID: review
+
+In "Features >> Event Subscriptions", you need to subscribe to
+
+ * message.channels
+ * message.groups
+ * message.im
+
+In "Features >> OAuth & Permissions >> Bot Token Scopes" section, you
+will need the following:
+
+ * channels:history
+ * channels:read
+ * chat:write
+ * commands
+ * groups:history
+ * groups:read
+ * im:history
+ * im:read
+ * mpim:history
+ * mpim:read
+ * users:read
+ * users:read.email
+
