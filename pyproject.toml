@@ -37,3 +37,8 @@ omit = [
     ]
 
 [tool.coverage.report]
+exclude_also = [
+    # abstract methods will never get executed (but the body of
+    # ... gets marked as never getting run unless we exclude them)
+    "@(abc\\.)?abstractmethod"
+    ]
