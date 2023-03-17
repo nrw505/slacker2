@@ -19,7 +19,11 @@ from slack_sdk.socket_mode.request import SocketModeRequest
 
 from slacker.github import GitHub, PR_RE
 
-from .user_presence_cache import UserPresenceCache
+from slacker.user_presence_cache import UserPresenceCache
+from slacker.user_presence_provider import (
+    SlackClientUserPresenceProvider,
+    UserPresenceProvider,
+)
 
 from slacker.model import User, Channel, UserChannelConfig, AssignedReview
 
@@ -27,6 +31,7 @@ from slacker.model import User, Channel, UserChannelConfig, AssignedReview
 class Bot:
     client: SocketModeClient
     db_engine: Engine
+    user_presence: UserPresenceProvider
 
     def __init__(
         self, app_token: str, bot_token: str, github_token: str, db_url: str
@@ -41,7 +46,9 @@ class Bot:
         )
         client.logger = self.logger.getChild("client")
         self.client = client
-        self.user_presence_cache = UserPresenceCache(client.web_client)
+        self.user_presence = UserPresenceCache(
+            SlackClientUserPresenceProvider(client.web_client)
+        )
 
     # Log every event coming from slack
     def log_listener(
@@ -233,7 +240,7 @@ class Bot:
         active_members = [
             member
             for member in channel_members
-            if self.user_presence_cache.getUserPresence(member)
+            if self.user_presence.getUserPresence(member)
         ]
         print(f"active_members = {active_members}")
         db_users = [

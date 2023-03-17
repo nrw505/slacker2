@@ -1,11 +1,13 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 
 from slack_sdk.web import WebClient
 
-CACHE_EXPIRY = timedelta(minutes=10)
+from slacker.user_presence_provider import UserPresenceProvider
+
+DEFAULT_CACHE_EXPIRY = timedelta(minutes=10)
 
 
 @dataclass
@@ -15,23 +17,29 @@ class UserPresenceCacheEntry:
     fetched: datetime
 
 
-class UserPresenceCache:
-    client: WebClient
+class UserPresenceCache(UserPresenceProvider):
+    provider: UserPresenceProvider
     cache: Dict[str, UserPresenceCacheEntry]
+    expiry: timedelta
 
-    def __init__(self, client: WebClient):
-        self.client = client
+    def __init__(
+        self,
+        provider: UserPresenceProvider,
+        expiry: timedelta = DEFAULT_CACHE_EXPIRY,
+    ):
+        self.provider = provider
         self.cache = {}
+        self.expiry = expiry
 
     def getUserPresence(self, user_id: str) -> bool:
         entry = self.cache.get(user_id)
         now = datetime.now()
 
-        if entry is None or (now - entry.fetched) > CACHE_EXPIRY:
-            response = self.client.users_getPresence(user=user_id)
+        if entry is None or (now - entry.fetched) > self.expiry:
+            presence = self.provider.getUserPresence(user_id)
             entry = UserPresenceCacheEntry(
                 user_id=user_id,
-                presence=(response.get("presence") == "active"),
+                presence=presence,
                 fetched=now,
             )
             self.cache[user_id] = entry
