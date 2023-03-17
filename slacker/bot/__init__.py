@@ -330,3 +330,6 @@ class Bot:
         # Wait on an event that will never be fulfilled, i.e. loop
         # infinitely and never return.
         Event().wait()
+
+
+__all__ = ["Bot"]

@@ -3,7 +3,7 @@ import re
 from github import Github
 from github.PullRequest import PullRequest
 
-PR_RE = re.compile("https://github.com/([^/]*)/([^/]*)/pull/([0-9]*)")
+PR_RE = re.compile("https://github.com/([^/]*)/([^/]*)/pull/([0-9]+)")
 
 
 class InvalidURLError(ValueError):
@@ -29,3 +29,6 @@ class GitHub:
         repo = self.client.get_repo(repo_name)
         pr = repo.get_pull(pr_num)
         return pr
+
+
+__all__ = ["GitHub", "InvalidURLError"]
