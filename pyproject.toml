@@ -19,7 +19,20 @@ pytest = "^7.2.0"
 black = "^22.12.0"
 mypy = "^0.991"
 python-dotenv = "^0.21.0"
+coverage = "^7.2.2"
+requests-mock = "^1.10.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = [
+    # __main__ is special and the code is run at import time, so
+    # executing it under pytest is a PITA
+    "**/__main__.py"
+    ]
+
+[tool.coverage.report]

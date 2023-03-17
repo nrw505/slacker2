@@ -2,5 +2,7 @@
 
 set -euo pipefail
 
-pytest
+coverage run --source=. -m pytest
+
+coverage html
 
