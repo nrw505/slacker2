@@ -31,4 +31,4 @@ class GitHub:
         return pr
 
 
-__all__ = ["GitHub", "InvalidURLError"]
+__all__ = ["GitHub", "InvalidURLError", "PullRequest"]
