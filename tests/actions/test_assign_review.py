@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
 
+from slacker.model import User, Channel, UserChannelConfig
 from slacker.actions.assign_review import AssignReview
 
 
@@ -22,18 +23,92 @@ def default_slack_state(dummy_slack):
     dummy_slack.set_channel_members("channel", ["bob", "jane"])
 
 
-def test_no_eligible_reviewers(broker, default_slack_state, db_session):
+@pytest.fixture
+def mock_pr():
     mock_pr = Mock()
     mock_pr.user.login = "bob"
     mock_pr.html_url = "https://github.com/mock/mock/pull/1"
+    return mock_pr
+
+
+def test_no_eligible_reviewers(broker, default_slack_state, db_session, mock_pr):
 
     with db_session as session:
         action = AssignReview(broker)
         result = action.perform(session, "bob", "channel", mock_pr)
 
-    assert result.successful == False
+    assert not result.successful
     assert (
         "No eligible reviewers for https://github.com/mock/mock/pull/1" in result.errors
     )
     assert "Assuming that Bob Bobsson is bob on github" in result.messages
+    assert result.reviewer is None
+
+
+def test_with_eligible_reviewer(
+    broker, default_slack_state, dummy_slack, db_session, mock_pr
+):
+    dummy_slack.set_user_presence("jane", "active")
+
+    with db_session as session:
+        jane = User(
+            slack_id="jane",
+            name="Jane Janesdottir",
+            email="jane.janesdottir@example.com",
+            github_username="jane",
+        )
+        bob = User(
+            slack_id="bob",
+            name="Bob Bobsson",
+            email="bob.bobsson@example.com",
+            github_username="bob",
+        )
+        session.add(jane)
+        session.add(bob)
+
+        action = AssignReview(broker)
+        result = action.perform(session, "bob", "channel", mock_pr)
+
+    assert result.successful
+    assert "Assuming that Bob Bobsson is bob on github" not in result.messages
+    assert result.reviewer.slack_id == "jane"
+
+
+def test_jane_exists_but_is_not_a_reviewer(
+    broker, default_slack_state, dummy_slack, db_session, mock_pr
+):
+    dummy_slack.set_user_presence("jane", "active")
+    with db_session as session:
+        jane = User(
+            slack_id="jane",
+            name="Jane Janesdottir",
+            email="jane.janesdottir@example.com",
+            github_username="jane",
+        )
+        bob = User(
+            slack_id="bob",
+            name="Bob Bobsson",
+            email="bob.bobsson@example.com",
+            github_username="bob",
+        )
+        channel = Channel(
+            slack_id="channel",
+            name="Test Channel",
+            new_devs_are_reviewers=False,
+        )
+        jane_in_channel = UserChannelConfig(
+            user=jane, channel=channel, reviewer=False, notify_on_assignment=False
+        )
+        session.add(jane)
+        session.add(bob)
+        session.add(channel)
+        session.add(jane_in_channel)
+
+        action = AssignReview(broker)
+        result = action.perform(session, "bob", "channel", mock_pr)
+
+    assert not result.successful
+    assert (
+        "No eligible reviewers for https://github.com/mock/mock/pull/1" in result.errors
+    )
     assert result.reviewer is None
