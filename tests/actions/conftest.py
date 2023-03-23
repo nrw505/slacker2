@@ -2,7 +2,7 @@ import pytest
 import os
 from sqlalchemy import create_engine, Engine, Connection
 from sqlalchemy.orm import Session
-from typing import Generator, Dict, List
+from typing import Generator
 from unittest.mock import Mock
 from slacker.data_broker import DataBroker
 from slacker.model import Base
@@ -11,7 +11,9 @@ from slacker.model import Base
 @pytest.fixture(scope="session")
 def db_engine() -> Engine:
     test_db_url = os.environ.get("TEST_DATABASE_URL")
-    if test_db_url is None:
+    if test_db_url is None:  # pragma: no cover
+        # only here to detect when the dev environment is not set up
+        # properly, won't ever happen in CI
         raise RuntimeError("TEST_DATABASE_URL is not set in environment")
     return create_engine(test_db_url)
 
@@ -39,22 +41,22 @@ def db_session(db_connection: Connection) -> Generator[Session, None, None]:
 
 
 class DummySlack:
-    channel_members: Dict[str, List[str]]
-    users: Dict[str, Dict[str, str]]
-    presence: Dict[str, str]
+    channel_members: dict[str, list[str]]
+    users: dict[str, dict[str, str]]
+    presence: dict[str, str]
 
     def __init__(self):
         self.channel_members = {}
         self.users = {}
         self.presence = {}
 
-    def set_user(self, user_id: str, user: Dict[str, str]):
+    def set_user(self, user_id: str, user: dict[str, str]):
         self.users[user_id] = user
 
     def set_user_presence(self, user_id: str, presence: str):
         self.presence[user_id] = presence
 
-    def set_channel_members(self, channel_id, user_list: List[str]):
+    def set_channel_members(self, channel_id, user_list: list[str]):
         self.channel_members[channel_id] = user_list
 
     def users_info(self, user: str):

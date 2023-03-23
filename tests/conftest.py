@@ -1,11 +1,10 @@
-from typing import Dict
 import pytest
 
 from slacker.user_presence_provider import UserPresenceProvider
 
 
 class DummyUPP(UserPresenceProvider):
-    users: Dict[str, bool]
+    users: dict[str, bool]
 
     def __init__(self) -> None:
         self.users = {}

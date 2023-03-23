@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from sqlalchemy.orm import Session
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,8 +12,8 @@ from slacker.data_broker import DataBroker
 @dataclass
 class AssignReviewResult:
     successful: bool
-    errors: List[str]
-    messages: List[str]
+    errors: list[str]
+    messages: list[str]
     reviewer: Optional[User]
 
 
@@ -77,7 +77,7 @@ class AssignReview:
 
     def calculate_eligible_reviewers_in_channel(
         self, session: Session, channel: Channel
-    ) -> List[User]:
+    ) -> list[User]:
         channel_members = self.broker.fetch_slack_user_ids_from_channel(channel)
         print(f"channel_members = {channel_members}")
         active_members = [

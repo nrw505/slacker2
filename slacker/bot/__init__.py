@@ -3,8 +3,6 @@ import re
 import random
 from datetime import datetime
 
-from typing import Dict, List
-
 from threading import Event
 
 from sqlalchemy import create_engine, Engine
@@ -142,7 +140,7 @@ class Bot:
                 "selected_channel"
             ]
 
-            errors: Dict[str, str] = {}
+            errors: dict[str, str] = {}
 
             url_is_good = self.github.valid_pr_url(pr_url)
             if not url_is_good:

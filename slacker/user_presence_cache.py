@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Optional
 
 from datetime import datetime, timedelta
 from dataclasses import dataclass
@@ -19,7 +19,7 @@ class UserPresenceCacheEntry:
 
 class UserPresenceCache(UserPresenceProvider):
     provider: UserPresenceProvider
-    cache: Dict[str, UserPresenceCacheEntry]
+    cache: dict[str, UserPresenceCacheEntry]
     expiry: timedelta
 
     def __init__(

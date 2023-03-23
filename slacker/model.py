@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase
-from typing import Optional, List
+from typing import Optional
 from sqlalchemy import String
 from sqlalchemy import Integer
 from sqlalchemy import Boolean
@@ -26,10 +26,10 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
 
-    channel_configs: Mapped[List["UserChannelConfig"]] = relationship(
+    channel_configs: Mapped[list["UserChannelConfig"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    assigned_reviews: Mapped[List["AssignedReview"]] = relationship(
+    assigned_reviews: Mapped[list["AssignedReview"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -45,10 +45,10 @@ class Channel(Base):
     name: Mapped[str] = mapped_column(String(255))
     new_devs_are_reviewers: Mapped[bool] = mapped_column(Boolean)
 
-    user_configs: Mapped[List["UserChannelConfig"]] = relationship(
+    user_configs: Mapped[list["UserChannelConfig"]] = relationship(
         back_populates="channel", cascade="all, delete-orphan"
     )
-    assigned_reviews: Mapped[List["AssignedReview"]] = relationship(
+    assigned_reviews: Mapped[list["AssignedReview"]] = relationship(
         # No cascade - if a channel is removed we want to still show
         # that the user had these reviews
         back_populates="channel",

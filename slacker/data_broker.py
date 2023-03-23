@@ -1,5 +1,3 @@
-from typing import List
-
 from slack_sdk.web import WebClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -88,7 +86,7 @@ class DataBroker:
 
         return config
 
-    def fetch_slack_user_ids_from_channel(self, channel: Channel) -> List[str]:
+    def fetch_slack_user_ids_from_channel(self, channel: Channel) -> list[str]:
         channel_members = []
         for page in self.slack.conversations_members(channel=channel.slack_id):
             channel_members += page["members"]
@@ -96,3 +94,6 @@ class DataBroker:
 
     def get_user_presence_for_slack_id(self, slack_user_id: str) -> bool:
         return self.user_presence_cache.getUserPresence(slack_user_id)
+
+
+__all__ = ["DataBroker"]
