@@ -198,7 +198,8 @@ class Bot:
             for message in result.messages:
                 self.send_text_to_channel(channel, message)
 
-            if result.reviewer is None:
+            reviewer = result.reviewer
+            if reviewer is None:
                 self.send_text_to_channel(
                     channel,
                     "No reviewer assigned but AssignReview action was successful!?",
@@ -206,7 +207,7 @@ class Bot:
             else:
                 self.send_text_to_channel(
                     channel,
-                    f"{result.reviewer.name} (<@{result.reviewer.slack_id}>) to review {pr.html_url}",
+                    f"{reviewer.name} (<@{reviewer.slack_id}>) to review {pr.html_url}",
                 )
             session.commit()
 

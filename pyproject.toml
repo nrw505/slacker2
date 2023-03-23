@@ -40,5 +40,8 @@ omit = [
 exclude_also = [
     # abstract methods will never get executed (but the body of
     # ... gets marked as never getting run unless we exclude them)
-    "@(abc\\.)?abstractmethod"
+    "@(abc\\.)?abstractmethod",
+    # __repr__ is for printing objects in a debugger or on a console,
+    # it's not something that will be done in test cases.
+    "def __repr__()",
     ]

@@ -22,8 +22,8 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("slack_id", sa.String(255), nullable=False, unique=True),
         sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("github_username", sa.String(255)),
-        sa.Column("password_hash", sa.String(255)),
+        sa.Column("github_username", sa.String(255), nullable=True),
+        sa.Column("password_hash", sa.String(255), nullable=True),
         sa.Column("email", sa.String(255), unique=True),
     )
     op.create_table(

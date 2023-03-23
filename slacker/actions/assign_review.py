@@ -70,7 +70,6 @@ class AssignReview:
             assigned_at=datetime.now(),
         )
         session.add(assign)
-        session.commit()
 
         result.successful = True
         result.reviewer = reviewer
