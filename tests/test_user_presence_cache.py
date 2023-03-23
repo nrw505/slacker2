@@ -5,6 +5,27 @@ from slacker.user_presence_provider import UserPresenceProvider
 from slacker.user_presence_cache import UserPresenceCache
 
 
+class DummyUPP(UserPresenceProvider):
+    users: dict[str, bool]
+
+    def __init__(self) -> None:
+        self.users = {}
+
+    def getUserPresence(self, user_id: str) -> bool:
+        return self.users.get(user_id, False)
+
+    def setUserActive(self, user_id: str) -> None:
+        self.users[user_id] = True
+
+    def setUserAway(self, user_id: str) -> None:
+        self.users[user_id] = False
+
+
+@pytest.fixture
+def dummy_user_presence_provider() -> UserPresenceProvider:
+    return DummyUPP()
+
+
 @pytest.fixture
 def populated_provider(dummy_user_presence_provider) -> UserPresenceProvider:
     dummy_user_presence_provider.setUserActive("active_user")

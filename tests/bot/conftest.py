@@ -1,6 +1,7 @@
 import pytest
+from unittest.mock import Mock, patch
 
 
 @pytest.fixture
-def dummy_slack_client():
+def mock_slack_connect(dummy_slack):
     pass
