@@ -46,13 +46,16 @@ def upgrade() -> None:
     op.create_table(
         "assigned_reviews",
         sa.Column("id", sa.Integer, primary_key=True),
-        sa.Column("user_id", sa.Integer, sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("assignee_id", sa.Integer, sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "requestor_id", sa.Integer, sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column(
             "channel_id", sa.Integer, sa.ForeignKey("channels.id"), nullable=False
         ),
         sa.Column("pr_url", sa.String(1024), nullable=False),
         sa.Column("assigned_at", sa.DateTime, nullable=False),
-        sa.Column("acknowleged_at", sa.DateTime, nullable=True),
+        sa.Column("acknowledged_at", sa.DateTime, nullable=True),
         sa.Column("rerolled_at", sa.DateTime, nullable=True),
         sa.Column("completed_at", sa.DateTime, nullable=True),
     )

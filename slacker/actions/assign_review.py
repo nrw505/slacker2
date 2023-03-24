@@ -54,7 +54,7 @@ class AssignReview:
         existing_assignments = self.broker.fetch_assignments_for_pr_url(
             session, pr.html_url
         )
-        assigned_users = [assignment.user for assignment in existing_assignments]
+        assigned_users = [assignment.assignee for assignment in existing_assignments]
 
         potential_reviewers = [
             user
@@ -71,7 +71,8 @@ class AssignReview:
         reviewer = random.choice(potential_reviewers)
 
         assign = AssignedReview(
-            user=reviewer,
+            assignee=reviewer,
+            requestor=requesting_user,
             channel=channel,
             pr_url=pr.html_url,
             assigned_at=datetime.now(),

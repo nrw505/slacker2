@@ -1,7 +1,9 @@
 import logging
 import re
 import random
+import functools
 from datetime import datetime
+from typing import Any
 
 from threading import Event
 
@@ -168,13 +170,227 @@ class Bot:
             # Assign PR to a reviewer
             self.assign_review(request.payload["user"]["id"], channel, pr_url)
 
+    def app_home_view_for_user(self, slack_user_id: str) -> dict[str, Any]:
+        review_blocks: list[dict[str, Any]] = []
+
+        with Session(self.db_engine) as session:
+            assigned_reviews = self.broker.fetch_active_assignments_for_slack_user_id(
+                session, slack_user_id
+            )
+            for assignment in assigned_reviews:
+                review_blocks.append(
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"Review {assignment.pr_url} for <@{assignment.requestor.slack_id}> in <#{assignment.channel.slack_id}>",
+                        },
+                    }
+                )
+                actions = []
+                if assignment.acknowledged_at is None:
+                    actions.append(
+                        {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": ":eyes: Acknowledge",
+                                "emoji": True,
+                            },
+                            "value": str(assignment.id),
+                            "action_id": "assignment-acknowledge",
+                        },
+                    )
+
+                if assignment.rerolled_at is None:
+                    actions.append(
+                        {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": ":game_die: Reroll",
+                                "emoji": True,
+                            },
+                            "value": str(assignment.id),
+                            "action_id": "assignment-reroll",
+                        },
+                    )
+
+                actions.append(
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": ":done: Reviewed",
+                            "emoji": True,
+                        },
+                        "value": str(assignment.id),
+                        "action_id": "assignment-reviewed",
+                    },
+                )
+
+                review_blocks.append({"type": "actions", "elements": actions})
+
+        if not review_blocks:
+            review_blocks = [
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": "No outstanding reviews"},
+                }
+            ]
+
+        return {
+            "type": "home",
+            "blocks": [
+                {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Welcome to the Slacker app",
+                        "emoji": True,
+                    },
+                }
+            ]
+            + review_blocks,
+        }
+
+    def send_app_home_to_user(
+        self, client: BaseSocketModeClient, slack_user_id: str
+    ) -> None:
+        self.client.web_client.views_publish(
+            user_id=slack_user_id,
+            view=self.app_home_view_for_user(slack_user_id),
+        )
+
+    def app_home_listener(
+        self, client: BaseSocketModeClient, request: SocketModeRequest
+    ) -> None:
+        # Is it relevant for setting up the application home view?
+        if (
+            request.type == "events_api"
+            and request.payload["event"]["type"] == "app_home_opened"
+        ):
+            # Acknowledge receipt of event
+            response = SocketModeResponse(envelope_id=request.envelope_id)
+            client.send_socket_mode_response(response)
+
+            slack_user_id = request.payload["event"]["user"]
+            self.send_app_home_to_user(client, slack_user_id)
+
+    def handle_block_action(
+        self, client: BaseSocketModeClient, slack_user_id: str, action: dict[str, Any]
+    ) -> None:
+        action_id = action["action_id"]
+        value = action["value"]
+
+        if action_id == "assignment-acknowledge":
+            with Session(self.db_engine) as session:
+                assignment = self.broker.fetch_assignment_for_id(session, value)
+                user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
+                    session, slack_user_id
+                )
+                if assignment is None:
+                    return
+
+                if assignment.assignee.slack_id != slack_user_id:
+                    # error?
+                    return
+
+                assignment.acknowledged_at = datetime.now()
+                session.commit()
+
+            self.send_app_home_to_user(client, slack_user_id)
+
+        if action_id == "assignment-reroll":
+            with Session(self.db_engine) as session:
+                assignment = self.broker.fetch_assignment_for_id(session, value)
+                user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
+                    session, slack_user_id
+                )
+                if assignment is None:
+                    return
+
+                if assignment.assignee.slack_id != slack_user_id:
+                    # error?
+                    return
+
+                self.reroll_review(session, assignment)
+                session.commit()
+
+            self.send_app_home_to_user(client, slack_user_id)
+
+        if action_id == "assignment-reviewed":
+            with Session(self.db_engine) as session:
+                assignment = self.broker.fetch_assignment_for_id(session, value)
+                user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
+                    session, slack_user_id
+                )
+                if assignment is None:
+                    return
+
+                if assignment.assignee.slack_id != slack_user_id:
+                    # error?
+                    return
+
+                assignment.completed_at = datetime.now()
+                session.commit()
+
+            self.send_app_home_to_user(client, slack_user_id)
+
+    def block_actions_listener(
+        self, client: BaseSocketModeClient, request: SocketModeRequest
+    ) -> None:
+        if request.type == "interactive" and request.payload["type"] == "block_actions":
+            # Acknowledge receipt of event
+            response = SocketModeResponse(envelope_id=request.envelope_id)
+            client.send_socket_mode_response(response)
+
+            # Dispatch each block action individually
+            for action in request.payload["actions"]:
+                self.handle_block_action(client, request.payload["user"]["id"], action)
+
     def register_listeners(self) -> None:
         self.client.socket_mode_request_listeners.append(self.log_listener)
         self.client.socket_mode_request_listeners.append(self.message_listener)
         self.client.socket_mode_request_listeners.append(self.review_listener)
+        self.client.socket_mode_request_listeners.append(self.app_home_listener)
+        self.client.socket_mode_request_listeners.append(self.block_actions_listener)
 
     def send_text_to_channel(self, channel: str, text: str) -> None:
         self.client.web_client.chat_postMessage(channel=channel, text=text)
+
+    def reroll_review(self, session: Session, assignment: AssignedReview) -> None:
+        self.logger.warning(f"rerolling review for {assignment!r}")
+        self.send_text_to_channel(
+            assignment.channel.slack_id, f"Rerolling {assignment.pr_url}"
+        )
+        pr = self.github.pr(assignment.pr_url)
+        channel = assignment.channel.slack_id
+        requestor = assignment.requestor.slack_id
+
+        action = AssignReview(self.broker)
+        result = action.perform(session, requestor, channel, pr)
+        if not result.successful:
+            for error in result.errors:
+                self.send_text_to_channel(channel, error)
+            return
+
+        for message in result.messages:
+            self.send_text_to_channel(channel, message)
+
+        reviewer = result.reviewer
+        if reviewer is None:
+            self.send_text_to_channel(
+                channel,
+                "No reviewer assigned but AssignReview action was successful!?",
+            )
+        else:
+            self.send_text_to_channel(
+                channel,
+                f"{reviewer.name} (<@{reviewer.slack_id}>) to review {pr.html_url}",
+            )
+
+        assignment.rerolled_at = datetime.now()
 
     def assign_review(self, requestor: str, channel: str, pr_url: str) -> None:
         self.logger.warning(

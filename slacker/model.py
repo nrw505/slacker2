@@ -30,7 +30,16 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     assigned_reviews: Mapped[list["AssignedReview"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        foreign_keys="[AssignedReview.assignee_id]",
+        back_populates="assignee",
+        cascade="all, delete-orphan",
+    )
+    requested_reviews: Mapped[list["AssignedReview"]] = relationship(
+        foreign_keys="[AssignedReview.requestor_id]",
+        back_populates="requestor",
+        # No cascade, if the requestor leaves marketplacer / slack we
+        # still want to know about the assigned reviews
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:
@@ -82,7 +91,10 @@ class AssignedReview(Base):
     __tablename__ = "assigned_reviews"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
+    assignee_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )
+    requestor_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=False
     )
     channel_id: Mapped[int] = mapped_column(
@@ -90,15 +102,20 @@ class AssignedReview(Base):
     )
     pr_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     assigned_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    acknowleged_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    acknowledged_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     rerolled_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
-    user: Mapped[User] = relationship(back_populates="assigned_reviews")
+    assignee: Mapped[User] = relationship(
+        foreign_keys="[AssignedReview.assignee_id]", back_populates="assigned_reviews"
+    )
+    requestor: Mapped[User] = relationship(
+        foreign_keys="[AssignedReview.requestor_id]", back_populates="requested_reviews"
+    )
     channel: Mapped[Channel] = relationship(back_populates="assigned_reviews")
 
     def __repr__(self) -> str:
-        return f"AssignedReview(id={self.id!r}, user_id={self.user_id!r}, pr={self.pr_url!r})"
+        return f"AssignedReview(id={self.id!r}, assignee={self.assignee_id!r}, requestor={self.requestor_id!r}, pr={self.pr_url!r})"
 
 
 __all__ = [

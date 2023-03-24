@@ -138,7 +138,8 @@ def test_jane_has_already_been_assigned_a_review(
             new_devs_are_reviewers=True,
         )
         existing_assignment = AssignedReview(
-            user=jane,
+            assignee=jane,
+            requestor=bob,
             channel=channel,
             assigned_at=datetime.now(),
             pr_url=mock_pr.html_url,

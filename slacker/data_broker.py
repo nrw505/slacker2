@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, Optional
 from slack_sdk.web import WebClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -92,6 +92,24 @@ class DataBroker:
     ) -> Sequence[AssignedReview]:
         statement = select(AssignedReview).where(AssignedReview.pr_url == pr_url)
         return session.scalars(statement).all()
+
+    def fetch_active_assignments_for_slack_user_id(
+        self, session: Session, slack_user_id: str
+    ) -> Sequence[AssignedReview]:
+        statement = (
+            select(AssignedReview)
+            .join(User.assigned_reviews)
+            .where(User.slack_id == slack_user_id)
+            .where(AssignedReview.completed_at == None)
+            .order_by(AssignedReview.assigned_at)
+        )
+        return session.scalars(statement).all()
+
+    def fetch_assignment_for_id(
+        self, session: Session, id: int
+    ) -> Optional[AssignedReview]:
+        statement = select(AssignedReview).where(AssignedReview.id == id)
+        return session.scalars(statement).one_or_none()
 
     def fetch_slack_user_ids_from_channel(self, channel: Channel) -> list[str]:
         channel_members = []
