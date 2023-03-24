@@ -51,10 +51,17 @@ class AssignReview:
         potential_reviewers = self.calculate_eligible_reviewers_in_channel(
             session, channel
         )
+        existing_assignments = self.broker.fetch_assignments_for_pr_url(
+            session, pr.html_url
+        )
+        assigned_users = [assignment.user for assignment in existing_assignments]
+
         potential_reviewers = [
             user
             for user in potential_reviewers
-            if user != requesting_user and user.github_username != pr.user.login
+            if user != requesting_user
+            and user.github_username != pr.user.login
+            and user not in assigned_users
         ]
 
         if not any(potential_reviewers):

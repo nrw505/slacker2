@@ -1,10 +1,11 @@
+from typing import Sequence
 from slack_sdk.web import WebClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from slacker.user_presence_cache import UserPresenceCache
 from slacker.user_presence_provider import SlackClientUserPresenceProvider
-from slacker.model import User, Channel, UserChannelConfig
+from slacker.model import User, Channel, UserChannelConfig, AssignedReview
 
 
 class DataBroker:
@@ -85,6 +86,12 @@ class DataBroker:
             session.add(config)
 
         return config
+
+    def fetch_assignments_for_pr_url(
+        self, session: Session, pr_url: str
+    ) -> Sequence[AssignedReview]:
+        statement = select(AssignedReview).where(AssignedReview.pr_url == pr_url)
+        return session.scalars(statement).all()
 
     def fetch_slack_user_ids_from_channel(self, channel: Channel) -> list[str]:
         channel_members = []
