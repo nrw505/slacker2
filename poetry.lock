@@ -1006,6 +1006,22 @@ pytest = ">=5.0.0"
 python-dotenv = ">=0.9.1"
 
 [[package]]
+name = "pytest-pspec"
+version = "0.0.4"
+description = "A rspec format reporter for Python ptest"
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pytest-pspec-0.0.4.tar.gz", hash = "sha256:5c0b0c9e964d5066cc5f2a2e1b296ad1313abbf58c4fd75014553fdf65bfe67a"},
+    {file = "pytest_pspec-0.0.4-py2.py3-none-any.whl", hash = "sha256:f80cc46f8896524bfe68750f3a5324bad8d4cb5112e90004bfdaafb7248e5cfd"},
+]
+
+[package.dependencies]
+pytest = ">=3.0.0"
+six = ">=1.11.0"
+
+[[package]]
 name = "python-dateutil"
 version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
@@ -1481,4 +1497,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "281f10b023baaa6b0c27e6a8e33024623f630d371c0f789366fbf53231458ad4"
+content-hash = "1ef03b5a1dee457c4c76c2a37848201512af86d4b4917f0953e7f681da9b5eaf"
