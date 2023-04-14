@@ -31,12 +31,12 @@ class UserPresenceCache(UserPresenceProvider):
         self.cache = {}
         self.expiry = expiry
 
-    def getUserPresence(self, user_id: str) -> bool:
+    def get_user_presence(self, user_id: str) -> bool:
         entry = self.cache.get(user_id)
         now = datetime.now()
 
         if entry is None or (now - entry.fetched) > self.expiry:
-            presence = self.provider.getUserPresence(user_id)
+            presence = self.provider.get_user_presence(user_id)
             entry = UserPresenceCacheEntry(
                 user_id=user_id,
                 presence=presence,

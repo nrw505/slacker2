@@ -11,13 +11,13 @@ class DummyUPP(UserPresenceProvider):
     def __init__(self) -> None:
         self.users = {}
 
-    def getUserPresence(self, user_id: str) -> bool:
+    def get_user_presence(self, user_id: str) -> bool:
         return self.users.get(user_id, False)
 
-    def setUserActive(self, user_id: str) -> None:
+    def set_user_active(self, user_id: str) -> None:
         self.users[user_id] = True
 
-    def setUserAway(self, user_id: str) -> None:
+    def set_user_away(self, user_id: str) -> None:
         self.users[user_id] = False
 
 
@@ -28,8 +28,8 @@ def dummy_user_presence_provider() -> UserPresenceProvider:
 
 @pytest.fixture
 def populated_provider(dummy_user_presence_provider) -> UserPresenceProvider:
-    dummy_user_presence_provider.setUserActive("active_user")
-    dummy_user_presence_provider.setUserAway("away_user")
+    dummy_user_presence_provider.set_user_active("active_user")
+    dummy_user_presence_provider.set_user_away("away_user")
     return dummy_user_presence_provider
 
 
@@ -39,25 +39,25 @@ def cache_provider(populated_provider) -> UserPresenceProvider:
 
 
 def test_cache_passthrough(cache_provider):
-    assert cache_provider.getUserPresence("active_user") is True
-    assert cache_provider.getUserPresence("away_user") is False
+    assert cache_provider.get_user_presence("active_user") is True
+    assert cache_provider.get_user_presence("away_user") is False
 
 
 def test_cache_caches(cache_provider, populated_provider, time_machine):
     # prime the cache
-    assert cache_provider.getUserPresence("active_user") is True
-    assert cache_provider.getUserPresence("away_user") is False
+    assert cache_provider.get_user_presence("active_user") is True
+    assert cache_provider.get_user_presence("away_user") is False
 
     # change the backing store
-    populated_provider.setUserAway("active_user")
-    populated_provider.setUserActive("away_user")
+    populated_provider.set_user_away("active_user")
+    populated_provider.set_user_active("away_user")
 
     # verify that we're still returning the cached value
-    assert cache_provider.getUserPresence("active_user") is True
-    assert cache_provider.getUserPresence("away_user") is False
+    assert cache_provider.get_user_presence("active_user") is True
+    assert cache_provider.get_user_presence("away_user") is False
 
     time_machine.move_to(datetime.now() + timedelta(minutes=2))
 
     # verify that the cache expires
-    assert cache_provider.getUserPresence("active_user") is False
-    assert cache_provider.getUserPresence("away_user") is True
+    assert cache_provider.get_user_presence("active_user") is False
+    assert cache_provider.get_user_presence("away_user") is True
