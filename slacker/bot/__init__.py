@@ -3,7 +3,7 @@ import re
 import random
 import functools
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional, Type
 
 from threading import Event
 
@@ -29,12 +29,17 @@ class Bot:
     client: SocketModeClient
     db_engine: Engine
     broker: DataBroker
+    terminate_event: Event
+    started_event: Event
+    session_factory: Type[Session]
 
     def __init__(
         self, app_token: str, bot_token: str, github_token: str, db_url: str
     ) -> None:
         self.github = GitHub(github_token)
         self.db_engine = create_engine(db_url)
+        # So we can override this in test suite
+        self.session_factory = Session
         self.logger = logging.getLogger(__name__)
 
         client = SocketModeClient(
@@ -44,6 +49,8 @@ class Bot:
         client.logger = self.logger.getChild("client")
         self.client = client
         self.broker = DataBroker(client.web_client)
+        self.terminate_event = Event()
+        self.started_event = Event()
 
     # Log every event coming from slack
     def log_listener(
@@ -173,7 +180,7 @@ class Bot:
     def app_home_view_for_user(self, slack_user_id: str) -> dict[str, Any]:
         review_blocks: list[dict[str, Any]] = []
 
-        with Session(self.db_engine) as session:
+        with self.session_factory(self.db_engine) as session:
             assigned_reviews = self.broker.fetch_active_assignments_for_slack_user_id(
                 session, slack_user_id
             )
@@ -284,7 +291,7 @@ class Bot:
         value = action["value"]
 
         if action_id == "assignment-acknowledge":
-            with Session(self.db_engine) as session:
+            with self.session_factory(self.db_engine) as session:
                 assignment = self.broker.fetch_assignment_for_id(session, value)
                 user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
                     session, slack_user_id
@@ -302,7 +309,7 @@ class Bot:
             self.send_app_home_to_user(client, slack_user_id)
 
         if action_id == "assignment-reroll":
-            with Session(self.db_engine) as session:
+            with self.session_factory(self.db_engine) as session:
                 assignment = self.broker.fetch_assignment_for_id(session, value)
                 user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
                     session, slack_user_id
@@ -320,7 +327,7 @@ class Bot:
             self.send_app_home_to_user(client, slack_user_id)
 
         if action_id == "assignment-reviewed":
-            with Session(self.db_engine) as session:
+            with self.session_factory(self.db_engine) as session:
                 assignment = self.broker.fetch_assignment_for_id(session, value)
                 user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
                     session, slack_user_id
@@ -370,25 +377,18 @@ class Bot:
 
         action = AssignReview(self.broker)
         result = action.perform(session, requestor, channel, pr)
-        if not result.successful:
-            for error in result.errors:
-                self.send_text_to_channel(channel, error)
-            return
 
         for message in result.messages:
             self.send_text_to_channel(channel, message)
 
         reviewer = result.reviewer
         if reviewer is None:
-            self.send_text_to_channel(
-                channel,
-                "No reviewer assigned but AssignReview action was successful!?",
-            )
-        else:
-            self.send_text_to_channel(
-                channel,
-                f"{reviewer.name} (<@{reviewer.slack_id}>) to review {pr.html_url}",
-            )
+            return
+
+        self.send_text_to_channel(
+            channel,
+            f"{reviewer.name} (<@{reviewer.slack_id}>) to review {pr.html_url}",
+        )
 
         assignment.rerolled_at = datetime.now()
 
@@ -400,32 +400,27 @@ class Bot:
 
         pr = self.github.pr(pr_url)
 
-        with Session(self.db_engine) as session:
+        with self.session_factory(self.db_engine) as session:
             action = AssignReview(self.broker)
             result = action.perform(session, requestor, channel, pr)
-
-            if not result.successful:
-                for error in result.errors:
-                    self.send_text_to_channel(channel, error)
-                return
 
             for message in result.messages:
                 self.send_text_to_channel(channel, message)
 
             reviewer = result.reviewer
             if reviewer is None:
-                self.send_text_to_channel(
-                    channel,
-                    "No reviewer assigned but AssignReview action was successful!?",
-                )
-            else:
-                self.send_text_to_channel(
-                    channel,
-                    f"{reviewer.name} (<@{reviewer.slack_id}>) to review {pr.html_url}",
-                )
+                return
+
+            self.send_text_to_channel(
+                channel,
+                f"{reviewer.name} (<@{reviewer.slack_id}>) to review {pr.html_url}",
+            )
             session.commit()
 
     def run(self) -> None:
+        # Clear any pending termination requests
+        self.terminate_event.clear()
+
         # Register listeners (we don't do this in __init__ because we
         # need to reference methods that are defined after __init__
         # is)
@@ -434,9 +429,21 @@ class Bot:
         # Start the client (starts a thread)
         self.client.connect()
 
-        # Wait on an event that will never be fulfilled, i.e. loop
-        # infinitely and never return.
-        Event().wait()
+        # Signal to any threads waiting for us to start that we have
+        # started
+        self.started_event.set()
+
+        # Wait on a termination event: in normal use this will never
+        # be fulfilled, i.e. loop infinitely and never return.  But
+        # when we're running under the control of a test we want it to
+        # be able to terminate us.
+        self.terminate_event.wait(timeout=None)
+
+    def terminate(self) -> None:
+        self.terminate_event.set()
+
+    def wait_for_start(self, timeout: Optional[float] = None) -> bool:
+        return self.started_event.wait(timeout=timeout)
 
 
 __all__ = ["Bot"]

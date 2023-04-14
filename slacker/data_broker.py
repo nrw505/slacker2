@@ -28,11 +28,9 @@ class DataBroker:
             email = None
 
             response = self.slack.users_info(user=slack_id)
-            slack_data = response.get("user")
-            print(f"slack_data = {slack_data}")
-            if slack_data is not None:
-                real_name = slack_data["real_name"]
-                email = slack_data["profile"]["email"]
+            slack_data = response["user"]
+            real_name = slack_data["real_name"]
+            email = slack_data["profile"]["email"]
 
             user = User(
                 slack_id=slack_id,
@@ -53,9 +51,8 @@ class DataBroker:
             name = "unknown"
 
             response = self.slack.conversations_info(channel=slack_id)
-            slack_data = response.get("channel")
-            if slack_data is not None:
-                name = slack_data["name"]
+            slack_data = response["channel"]
+            name = slack_data["name"]
 
             channel = Channel(
                 slack_id=slack_id,

@@ -11,8 +11,6 @@ from slacker.data_broker import DataBroker
 
 @dataclass
 class AssignReviewResult:
-    successful: bool
-    errors: list[str]
     messages: list[str]
     reviewer: Optional[User]
 
@@ -30,9 +28,7 @@ class AssignReview:
         channel_slack_id: str,
         pr: PullRequest,
     ) -> AssignReviewResult:
-        result = AssignReviewResult(
-            successful=False, errors=[], messages=[], reviewer=None
-        )
+        result = AssignReviewResult(messages=[], reviewer=None)
 
         requesting_user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
             session, requestor_slack_id
@@ -65,7 +61,7 @@ class AssignReview:
         ]
 
         if not any(potential_reviewers):
-            result.errors.append(f"No eligible reviewers for {pr.html_url}")
+            result.messages.append(f"No eligible reviewers for {pr.html_url}")
             return result
 
         reviewer = random.choice(potential_reviewers)
@@ -79,7 +75,6 @@ class AssignReview:
         )
         session.add(assign)
 
-        result.successful = True
         result.reviewer = reviewer
         return result
 

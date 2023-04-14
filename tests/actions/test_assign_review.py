@@ -38,12 +38,12 @@ def test_no_eligible_reviewers(broker, default_slack_state, db_session, mock_pr)
         action = AssignReview(broker)
         result = action.perform(session, "bob", "channel", mock_pr)
 
-    assert not result.successful
+    assert result.reviewer is None
     assert (
-        "No eligible reviewers for https://github.com/mock/mock/pull/1" in result.errors
+        "No eligible reviewers for https://github.com/mock/mock/pull/1"
+        in result.messages
     )
     assert "Assuming that Bob Bobsson is bob on github" in result.messages
-    assert result.reviewer is None
 
 
 def test_with_eligible_reviewer(
@@ -70,7 +70,7 @@ def test_with_eligible_reviewer(
         action = AssignReview(broker)
         result = action.perform(session, "bob", "channel", mock_pr)
 
-    assert result.successful
+    assert result.reviewer
     assert "Assuming that Bob Bobsson is bob on github" not in result.messages
     assert result.reviewer.slack_id == "jane"
 
@@ -108,11 +108,11 @@ def test_jane_exists_but_is_not_a_reviewer(
         action = AssignReview(broker)
         result = action.perform(session, "bob", "channel", mock_pr)
 
-    assert not result.successful
-    assert (
-        "No eligible reviewers for https://github.com/mock/mock/pull/1" in result.errors
-    )
     assert result.reviewer is None
+    assert (
+        "No eligible reviewers for https://github.com/mock/mock/pull/1"
+        in result.messages
+    )
 
 
 def test_jane_has_already_been_assigned_a_review(
@@ -152,8 +152,8 @@ def test_jane_has_already_been_assigned_a_review(
         action = AssignReview(broker)
         result = action.perform(session, "bob", "channel", mock_pr)
 
-    assert not result.successful
-    assert (
-        "No eligible reviewers for https://github.com/mock/mock/pull/1" in result.errors
-    )
     assert result.reviewer is None
+    assert (
+        "No eligible reviewers for https://github.com/mock/mock/pull/1"
+        in result.messages
+    )

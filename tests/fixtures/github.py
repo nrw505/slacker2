@@ -1,12 +1,5 @@
 import pytest
 
-from slacker.github import GitHub
-
-
-@pytest.fixture
-def dummy_github() -> GitHub:
-    return GitHub("dummy-token")
-
 
 @pytest.fixture
 def mocked_pr_url(requests_mock) -> str:
