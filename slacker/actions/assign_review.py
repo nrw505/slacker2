@@ -64,7 +64,9 @@ class AssignReview:
             result.messages.append(f"No eligible reviewers for {pr.html_url}")
             return result
 
-        reviewer = random.choice(potential_reviewers)
+        # this isn't for cryptography or security purposes, so B311
+        # doesn't apply
+        reviewer = random.choice(potential_reviewers)  # nosec B311
 
         assign = AssignedReview(
             assignee=reviewer,
