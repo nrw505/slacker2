@@ -2,7 +2,4 @@
 
 set -euo pipefail
 
-coverage run --source=. -m pytest
-
-coverage html
-
+pytest --cov --cov-report=html --cov-report=term

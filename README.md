@@ -40,6 +40,30 @@ Running the web app
 
 It runs on localhost:5000
 
+Running the tests
+-----------------
+
+    $ pytest
+
+Viewing the test coverage report
+--------------------------------
+
+First, run the tests with coverage enabled
+
+    $ ./script/ci/run-tests.sh
+
+On linux
+
+    $ xdg-open htmlcov/index.html
+
+On OSX
+
+    $ open htmlcov/index.html
+
+On windows, probably (update this doc if I'm wrong please)
+
+    $ edge htmlcov/index.html
+
 Credentials
 -----------
 

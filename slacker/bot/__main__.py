@@ -1,8 +1,10 @@
 import os
 import logging
+from dotenv import load_dotenv
 
 from . import Bot
 
+load_dotenv()
 logging.basicConfig()
 
 app_token = os.environ.get("SLACK_APP_TOKEN")
