@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: "poetry"
+    directory: "/"
+    insecure-external-code-execution: allow
+    schedule:
+      interval: "daily"
+      time: "05:30"
+      timezone: Australia/Melbourne
+    open-pull-requests-limit: 10
