@@ -361,3 +361,37 @@ def test_edit_user_github_username(bot, default_slack_state, db_session):
 
     bot.block_actions_listener(bot.client, request)
     assert bot.client.web_client.views_opened["trigger"]
+
+
+def test_set_channel_lurker(bot, default_slack_state, db_session):
+    request = Mock()
+    request.type = "interactive"
+    request.payload = {
+        "type": "block_actions",
+        "user": {"id": "jane"},
+        "actions": [
+            {"action_id": "set-channel-lurker", "value": "channel"},
+        ],
+        "trigger_id": "trigger",
+    }
+    request.envelope_id = "test-envelope-id"
+
+    bot.block_actions_listener(bot.client, request)
+    assert bot.client.web_client.views_published["jane"]
+
+
+def test_set_channel_reviewer(bot, default_slack_state, db_session):
+    request = Mock()
+    request.type = "interactive"
+    request.payload = {
+        "type": "block_actions",
+        "user": {"id": "jane"},
+        "actions": [
+            {"action_id": "set-channel-reviewer", "value": "channel"},
+        ],
+        "trigger_id": "trigger",
+    }
+    request.envelope_id = "test-envelope-id"
+
+    bot.block_actions_listener(bot.client, request)
+    assert bot.client.web_client.views_published["jane"]

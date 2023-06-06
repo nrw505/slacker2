@@ -217,7 +217,6 @@ class Bot:
                 # Slack is nice enough to turn "" into None for us already
                 user.github_username = github_username
 
-                session.add(user)
                 session.commit()
 
             self.send_app_home_to_user(client, slack_user_id)
@@ -307,15 +306,28 @@ class Bot:
             )
             for user_channel_config in user_channel_configs:
                 reviewer = "a reviewer"
+                action = "set-channel-lurker"
+                action_text = "Lurk"
                 if not user_channel_config.reviewer:
                     reviewer = "not a reviewer"
+                    action = "set-channel-reviewer"
+                    action_text = "Review"
 
                 blocks.append(
                     {
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": f"In {user_channel_config.channel.name} you are {reviewer}",
+                            "text": f"In #{user_channel_config.channel.name} you are {reviewer}",
+                        },
+                        "accessory": {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": action_text,
+                            },
+                            "value": user_channel_config.channel.slack_id,
+                            "action_id": action,
                         },
                     }
                 )
@@ -518,6 +530,40 @@ class Bot:
                         ],
                     },
                 )
+
+        if action_id == "set-channel-lurker":
+            with self.session_factory(self.db_engine) as session:
+                channel = self.broker.fetch_channel_by_slack_id_or_create_from_slack(
+                    session, value
+                )
+                user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
+                    session, slack_user_id
+                )
+                channel_config = (
+                    self.broker.fetch_or_create_channel_config_for_user_in_channel(
+                        session, user, channel
+                    )
+                )
+                channel_config.reviewer = False
+                session.commit()
+            self.send_app_home_to_user(client, slack_user_id)
+
+        if action_id == "set-channel-reviewer":
+            with self.session_factory(self.db_engine) as session:
+                channel = self.broker.fetch_channel_by_slack_id_or_create_from_slack(
+                    session, value
+                )
+                user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
+                    session, slack_user_id
+                )
+                channel_config = (
+                    self.broker.fetch_or_create_channel_config_for_user_in_channel(
+                        session, user, channel
+                    )
+                )
+                channel_config.reviewer = True
+                session.commit()
+            self.send_app_home_to_user(client, slack_user_id)
 
     def block_actions_listener(
         self, client: BaseSocketModeClient, request: SocketModeRequest
