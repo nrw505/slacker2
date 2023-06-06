@@ -17,7 +17,7 @@ def test_empty_app_view(bot, db_session):
         view = bot.app_home_view_for_user("jane")
 
     assert view["type"] == "home"
-    assert len(view["blocks"]) == 2
+    assert len(view["blocks"]) == 8
 
     header_block = view["blocks"][0]
     assert header_block["type"] == "header"
@@ -42,11 +42,20 @@ def test_app_view_with_assigned_reviews(bot, db_session):
             email="bob.bobsson@example.com",
             github_username="bob",
         )
+        cheryl = User(
+            slack_id="cheryl",
+            name="Cheryl Cherylsdottir",
+            email="cheryl.cherylsdottir@example.com",
+            github_username=None,
+        )
         channel = Channel(
             slack_id="channel", name="Test Channel", new_devs_are_reviewers=False
         )
         jane_in_channel = UserChannelConfig(
             user=jane, channel=channel, reviewer=True, notify_on_assignment=False
+        )
+        bob_in_channel = UserChannelConfig(
+            user=bob, channel=channel, reviewer=False, notify_on_assignment=False
         )
         assignment_1 = AssignedReview(
             assignee=jane,
@@ -81,20 +90,28 @@ def test_app_view_with_assigned_reviews(bot, db_session):
         )
         session.add(jane)
         session.add(channel)
+        session.add(cheryl)
         session.add(jane_in_channel)
+        session.add(bob_in_channel)
         session.add(assignment_1)
         session.add(assignment_2)
         session.add(assignment_3)
         session.add(assignment_4)
 
-        view = bot.app_home_view_for_user("jane")
+        view1 = bot.app_home_view_for_user("jane")
+        view2 = bot.app_home_view_for_user("bob")
+        view3 = bot.app_home_view_for_user("cheryl")
 
-    assert view["type"] == "home"
-    assert len(view["blocks"]) == 7
+    assert view1["type"] == "home"
+    assert len(view1["blocks"]) == 13
 
-    header_block = view["blocks"][0]
+    header_block = view1["blocks"][0]
     assert header_block["type"] == "header"
     assert "Slacker" in header_block["text"]["text"]
+
+    assert view2["type"] == "home"
+
+    assert view3["type"] == "home"
 
     # Right now I'm not so fussed by the content of the rest of the
     # blocks, just want to make sure we don't error generate them and

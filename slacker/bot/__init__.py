@@ -84,19 +84,22 @@ class Bot:
 
                 self.assign_review(event["user"], event["channel"], match[0])
 
-    def review_listener(
+    def shortcut_listener(
         self, client: BaseSocketModeClient, request: SocketModeRequest
     ) -> None:
         # Is it for me?
-        if (
-            request.type == "interactive"
-            and request.payload.get("type") == "shortcut"
-            and request.payload["callback_id"] == "review"
-        ):
-            # Acknowledge the event
-            response = SocketModeResponse(envelope_id=request.envelope_id)
-            client.send_socket_mode_response(response)
+        if request.type != "interactive":
+            return
+        if request.payload["type"] != "shortcut":
+            return
 
+        # Acknowledge the event
+        response = SocketModeResponse(envelope_id=request.envelope_id)
+        client.send_socket_mode_response(response)
+
+        callback_id = request.payload["callback_id"]
+
+        if callback_id == "review":
             # respond to /slacker review
             client.web_client.views_open(
                 trigger_id=request.payload["trigger_id"],
@@ -137,19 +140,26 @@ class Bot:
                 },
             )
 
-        if (
-            request.type == "interactive"
-            and request.payload.get("type") == "view_submission"
-            and request.payload["view"]["callback_id"] == "review-modal"
-        ):
+    def view_submission_listener(
+        self, client: BaseSocketModeClient, request: SocketModeRequest
+    ) -> None:
+        # Is it for me?
+        if request.type != "interactive":
+            return
+        if request.payload["type"] != "view_submission":
+            return
+        callback_id = request.payload["view"]["callback_id"]
+        slack_user_id = request.payload["user"]["id"]
+
+        errors: dict[str, str] = {}
+
+        if callback_id == "review-modal":
             # Check the payload for errors
             response_payload = None
             pr_url = request.payload["view"]["state"]["values"]["pr"]["pr_url"]["value"]
             channel = request.payload["view"]["state"]["values"]["channel"]["channel"][
                 "selected_channel"
             ]
-
-            errors: dict[str, str] = {}
 
             url_is_good = self.github.valid_pr_url(pr_url)
             if not url_is_good:
@@ -177,7 +187,44 @@ class Bot:
             # Assign PR to a reviewer
             self.assign_review(request.payload["user"]["id"], channel, pr_url)
 
-    def app_home_view_for_user(self, slack_user_id: str) -> dict[str, Any]:
+        if callback_id == "edit-github-username":
+            response_payload = None
+
+            github_username = request.payload["view"]["state"]["values"][
+                "github_username"
+            ]["github_username"]["value"]
+
+            if github_username is not None and not self.github.valid_username(
+                github_username
+            ):
+                errors["github_username"] = "That is not a valid github username"
+
+            # Send the acknowledgement, possibly with errors
+            response = SocketModeResponse(
+                envelope_id=request.envelope_id, payload=response_payload
+            )
+            client.send_socket_mode_response(response)
+
+            # If errors, bail out
+            if any(errors):
+                return
+
+            with self.session_factory(self.db_engine) as session:
+                user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
+                    session, slack_user_id
+                )
+
+                # Slack is nice enough to turn "" into None for us already
+                user.github_username = github_username
+
+                session.add(user)
+                session.commit()
+
+            self.send_app_home_to_user(client, slack_user_id)
+
+    def app_home_review_blocks_for_user(
+        self, slack_user_id: str
+    ) -> list[dict[str, Any]]:
         review_blocks: list[dict[str, Any]] = []
 
         with self.session_factory(self.db_engine) as session:
@@ -246,6 +293,90 @@ class Bot:
                 }
             ]
 
+        return review_blocks
+
+    def app_home_channel_blocks_for_user(
+        self, slack_user_id: str
+    ) -> list[dict[str, Any]]:
+        blocks = []
+        with self.session_factory(self.db_engine) as session:
+            user_channel_configs = (
+                self.broker.fetch_user_channel_configs_for_slack_user_id(
+                    session, slack_user_id
+                )
+            )
+            for user_channel_config in user_channel_configs:
+                reviewer = "a reviewer"
+                if not user_channel_config.reviewer:
+                    reviewer = "not a reviewer"
+
+                blocks.append(
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"In {user_channel_config.channel.name} you are {reviewer}",
+                        },
+                    }
+                )
+
+        if not blocks:
+            blocks.append(
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": "No channels configured"},
+                }
+            )
+
+        return blocks
+
+    def app_home_user_blocks_for_user(self, slack_user_id: str) -> list[dict[str, Any]]:
+        with self.session_factory(self.db_engine) as session:
+            user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
+                session, slack_user_id
+            )
+            github_username_text = f"Your github username is *{user.github_username}*"
+            if user.github_username is None:
+                github_username_text = f"You do not have github username"
+
+            return [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"Your name is *{user.name}*",
+                    },
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"Your email address is *{user.email}*",
+                    },
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": github_username_text,
+                    },
+                    "accessory": {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "Edit"},
+                        "value": "edit",
+                        "action_id": "edit-user-github-username",
+                    },
+                },
+            ]
+
+    def app_home_view_for_user(self, slack_user_id: str) -> dict[str, Any]:
+        review_blocks = self.app_home_review_blocks_for_user(slack_user_id)
+        user_detail_blocks = self.app_home_user_blocks_for_user(slack_user_id)
+        channel_blocks = self.app_home_channel_blocks_for_user(slack_user_id)
+        divider_blocks = [
+            {"type": "divider"},
+        ]
+
         return {
             "type": "home",
             "blocks": [
@@ -258,7 +389,11 @@ class Bot:
                     },
                 }
             ]
-            + review_blocks,
+            + review_blocks
+            + divider_blocks
+            + user_detail_blocks
+            + divider_blocks
+            + channel_blocks,
         }
 
     def send_app_home_to_user(
@@ -285,7 +420,11 @@ class Bot:
             self.send_app_home_to_user(client, slack_user_id)
 
     def handle_block_action(
-        self, client: BaseSocketModeClient, slack_user_id: str, action: dict[str, Any]
+        self,
+        client: BaseSocketModeClient,
+        slack_user_id: str,
+        action: dict[str, Any],
+        trigger_id: str,
     ) -> None:
         action_id = action["action_id"]
         value = action["value"]
@@ -344,6 +483,42 @@ class Bot:
 
             self.send_app_home_to_user(client, slack_user_id)
 
+        if action_id == "edit-user-github-username":
+            with self.session_factory(self.db_engine) as session:
+                user = self.broker.fetch_user_by_slack_id_or_create_from_slack(
+                    session, slack_user_id
+                )
+                client.web_client.views_open(
+                    trigger_id=trigger_id,
+                    view={
+                        "type": "modal",
+                        "callback_id": "edit-github-username",
+                        "title": {
+                            "type": "plain_text",
+                            "text": "Change github username",
+                        },
+                        "submit": {"type": "plain_text", "text": "Save"},
+                        "blocks": [
+                            {
+                                "type": "input",
+                                "block_id": "github_username",
+                                "label": {
+                                    "type": "plain_text",
+                                    "text": "Your :github: GitHub username",
+                                    "emoji": True,
+                                },
+                                "optional": True,
+                                "element": {
+                                    "type": "plain_text_input",
+                                    "initial_value": user.github_username or "",
+                                    "action_id": "github_username",
+                                    "focus_on_load": True,
+                                },
+                            },
+                        ],
+                    },
+                )
+
     def block_actions_listener(
         self, client: BaseSocketModeClient, request: SocketModeRequest
     ) -> None:
@@ -354,12 +529,18 @@ class Bot:
 
             # Dispatch each block action individually
             for action in request.payload["actions"]:
-                self.handle_block_action(client, request.payload["user"]["id"], action)
+                self.handle_block_action(
+                    client,
+                    request.payload["user"]["id"],
+                    action,
+                    request.payload["trigger_id"],
+                )
 
     def register_listeners(self) -> None:
         self.client.socket_mode_request_listeners.append(self.log_listener)
         self.client.socket_mode_request_listeners.append(self.message_listener)
-        self.client.socket_mode_request_listeners.append(self.review_listener)
+        self.client.socket_mode_request_listeners.append(self.shortcut_listener)
+        self.client.socket_mode_request_listeners.append(self.view_submission_listener)
         self.client.socket_mode_request_listeners.append(self.app_home_listener)
         self.client.socket_mode_request_listeners.append(self.block_actions_listener)
 

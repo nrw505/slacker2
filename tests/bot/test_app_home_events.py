@@ -22,7 +22,7 @@ def test_not_understood_event(bot):
     bot.client.send_socket_mode_response.assert_not_called()
 
 
-def test_app_home_opened_event(bot):
+def test_app_home_opened_event(bot, default_slack_state):
     request = Mock()
     request.type = "events_api"
     request.payload = {

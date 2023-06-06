@@ -81,6 +81,7 @@ def test_acknowledge_assignment_event(bot, db_session, preloaded_assignment_id):
                 "value": str(preloaded_assignment_id),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -106,6 +107,7 @@ def test_acknowledge_assignment_event_from_wrong_person(
                 "value": str(preloaded_assignment_id),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -131,6 +133,7 @@ def test_acknowledge_assignment_event_for_nonexistent_assignment(
                 "value": str(preloaded_assignment_id + 1000),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -154,6 +157,7 @@ def test_reviewed_assignment_event(bot, db_session, preloaded_assignment_id):
                 "value": str(preloaded_assignment_id),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -179,6 +183,7 @@ def test_reviewed_assignment_event_from_wrong_person(
                 "value": str(preloaded_assignment_id),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -204,6 +209,7 @@ def test_reviewed_assignment_event_for_nonexistent_assignment(
                 "value": str(preloaded_assignment_id + 1000),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -229,6 +235,7 @@ def test_reroll_assignment_event(
                 "value": str(preloaded_assignment_id),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -270,6 +277,7 @@ def test_reroll_assignment_where_nobody_is_eligible_event(
                 "value": str(preloaded_assignment_id),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -298,6 +306,7 @@ def test_reroll_assignment_event_from_wrong_person(
                 "value": str(preloaded_assignment_id),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -324,6 +333,7 @@ def test_reroll_assignment_event_for_nonexistent_assignment(
                 "value": str(preloaded_assignment_id + 1000),
             },
         ],
+        "trigger_id": "1",
     }
     request.envelope_id = "test-envelope-id"
 
@@ -334,3 +344,20 @@ def test_reroll_assignment_event_for_nonexistent_assignment(
 
     reloaded = bot.broker.fetch_assignment_for_id(db_session, preloaded_assignment_id)
     assert reloaded.rerolled_at is None
+
+
+def test_edit_user_github_username(bot, default_slack_state, db_session):
+    request = Mock()
+    request.type = "interactive"
+    request.payload = {
+        "type": "block_actions",
+        "user": {"id": "jane"},
+        "actions": [
+            {"action_id": "edit-user-github-username", "value": "1"},
+        ],
+        "trigger_id": "trigger",
+    }
+    request.envelope_id = "test-envelope-id"
+
+    bot.block_actions_listener(bot.client, request)
+    assert bot.client.web_client.views_opened["trigger"]

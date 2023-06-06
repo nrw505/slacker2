@@ -117,5 +117,13 @@ class DataBroker:
     def get_user_presence_for_slack_id(self, slack_user_id: str) -> bool:
         return self.user_presence_cache.get_user_presence(slack_user_id)
 
+    def fetch_user_channel_configs_for_slack_user_id(
+        self, session: Session, slack_user_id: str
+    ) -> Sequence[UserChannelConfig]:
+        statement = (
+            select(UserChannelConfig).join(User).where(User.slack_id == slack_user_id)
+        )
+        return session.scalars(statement).all()
+
 
 __all__ = ["DataBroker"]
