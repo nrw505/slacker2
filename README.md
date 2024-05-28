@@ -17,7 +17,7 @@ Install all the python deps
 
     $ python -mvenv .venv
     $ . .venv/bin/activate
-    $ pip install pypoetry
+    $ pip install poetry
     $ poetry install
 
 Create a database if necessary

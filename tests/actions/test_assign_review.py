@@ -33,7 +33,6 @@ def mock_pr():
 
 
 def test_no_eligible_reviewers(broker, default_slack_state, db_session, mock_pr):
-
     with db_session as session:
         action = AssignReview(broker)
         result = action.perform(session, "bob", "channel", mock_pr)
