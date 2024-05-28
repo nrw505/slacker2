@@ -17,9 +17,10 @@ sqlalchemy = "^2.0.0rc2"
 
 [tool.poetry.group.dev.dependencies]
 bandit = {extras = ["toml"], version = "^1.7.5"}
-black = "^22.12.0"
+black = "^23"
 coverage = "^7.2.2"
 mypy = "^0.991"
+packaging = "^24" # poetry dies with packaging <23.1
 pytest = "^7.2.0"
 pytest-cov = "^4.0.0"
 pytest-dotenv = "^0.5.2"

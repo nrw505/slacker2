@@ -142,7 +142,6 @@ def test_view_submission_event_edit_github_username_with_username(
 def test_view_submission_event_edit_github_username_with_bad_username(
     bot, default_slack_state, db_session
 ):
-
     request = Mock()
     request.type = "interactive"
     request.payload = {
