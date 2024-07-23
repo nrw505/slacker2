@@ -5,8 +5,7 @@ from slack_sdk.web import WebClient
 
 class UserPresenceProvider(ABC):
     @abstractmethod
-    def get_user_presence(self, user_id: str) -> bool:
-        ...
+    def get_user_presence(self, user_id: str) -> bool: ...
 
 
 class SlackClientUserPresenceProvider(UserPresenceProvider):
